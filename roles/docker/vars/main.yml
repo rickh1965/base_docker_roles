@@ -1,0 +1,7 @@
+---
+# vars file for docker
+mynfs: "nas01.home.lan:/volume1/docker"
+mountpoint: "/docker"
+permission: '0777'
+myopts: 'rw,sync'
+admin_user: "admin"

@@ -1,0 +1,149 @@
+---
+# 
+# Ensure your server boots on a drive *outside* of the array controller. Any disks behind by the controller will no longer be able to be booted from.
+# Also, your controller must be at firmware 6.64. This playbook will not run on lower versions.
+#
+- hosts: p410_hosts
+  gather_facts: true
+  become: true
+  tasks:
+
+    - name: Fix enterprise repo to remove enterprise sub
+      ansible.builtin.replace:
+        path: /etc/apt/sources.list.d/pve-enterprise.list
+        regexp: '^deb'
+        replace: '#deb'
+
+    - name: Fix enterprise repo add no subscription
+      lineinfile:
+        path: /etc/apt/sources.list
+        line: deb http://download.proxmox.com/debian/pve bullseye pve-no-subscription
+
+    - name: Get arch
+      command: "dpkg --print-architecture"
+      register: arch
+
+    - name: create repo for github
+      lineinfile:
+        path: /etc/apt/sources.list.d/github-cli.list
+        line: deb [arch={{ arch.stdout }} signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main
+        create: yes
+
+    - name: Generate keyring for github repo
+      shell: "curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg"
+      args:
+        creates: "/usr/share/keyrings/githubcli-archive-keyring.gpg"
+
+    - name: Update Cache and Upgrade all Packages
+      register: updatesys
+      apt:
+        name: "*"
+        state: latest
+        update_cache: yes
+
+    - name: Display the last line of the previous task to check updates
+      debug:
+        msg:  "{{updatesys.stdout_lines|last}}"
+
+    - name: Install Necessary packages for Install
+      ansible.builtin.apt:
+        name: 
+          - make
+          - gcc
+          - git
+          - pandoc
+          - wget
+          - sudo
+          - htop
+          - iotop
+          - sdparm
+          - screen
+          - postfix
+          - open-iscsi
+          - curl
+          - pve-headers
+          - dkms
+          - gh
+        state: latest
+
+    - name: Add HP blacklist to modprobe.conf
+      lineinfile:
+        path: /etc/modprobe.d/blacklist-hp.conf
+        line: blacklist hpwdt
+        create: yes
+
+    - name:  Check if hpsahba has already been cloned
+      stat:
+        path: "/root/hpsahba"
+      register: already_cloned
+
+    - name: Clone hpsahba repo if first time through
+      ansible.builtin.git:
+        repo: https://github.com/im-0/hpsahba.git
+        dest: /root/hpsahba
+      when: not already_cloned.stat.exists
+
+    - name: Build hpsahba executable
+      make:
+        chdir: /root/hpsahba
+
+    - name: Get Running firmware Version on HBA
+      shell:  "/root/hpsahba/hpsahba -i /dev/sg0"
+      register: results
+    - set_fact:
+        myvalue: "{{ results.stdout | regex_search(regexp,'\\1') | replace(\"'\",'')  }}"
+      vars:
+        regexp: RUNNING_FIRM_REV=([^\"].+)
+
+    - name: Check Firmware version
+      fail: 
+        msg: Firmware must be updated to version 6.64 it appears to be {{ myvalue }}
+      when:  not myvalue|regex_search('6.64')
+
+    - name: show version
+      debug:
+        msg: "{{ myvalue }}"
+
+    - name: Fix dkms make file
+      replace:
+        path: /root/hpsahba/contrib/dkms/Makefile
+        regexp: '^KDIR := /usr/lib'
+        replace: "KDIR := /lib"
+
+    - name: Fix patch.sh file
+      replace:
+        path: /root/hpsahba/contrib/dkms/patch.sh
+        regexp: 'VERSION=\$\{1:-5.8\}'
+        replace: "VERSION=${1:-$(uname -r | grep -o \"^[0-9]*[.][0-9]*\")}"
+    
+    - name: Run commands to finish installation
+      command: "{{ item }}"
+      args:
+        chdir: /root/hpsahba/contrib/dkms
+      with_items:
+        - "./patch.sh"
+        - "dkms add ./"
+        - "dkms install --force hpsa-dkms/1.0"
+        - "modprobe -r hpsa"
+        - "modprobe hpsa hpsa_use_nvram_hba_flag=1"
+      ignore_errors: true
+
+    - name: Add hba_flag
+      lineinfile:
+        path: /etc/modprobe.d/hpsa.conf
+        line: "options hpsa hpsa_use_nvram_hba_flag=1"
+        create: yes
+ 
+    - name: update initramfs
+      shell: update-initramfs -u
+
+    - name: Unconditionally reboot the machine with all defaults
+      ansible.builtin.reboot:
+  
+    - name: display newly found disks with lsblk
+      shell: lsblk
+      register: lsblk_output
+
+    - debug:
+        msg: "{{lsblk_output.stdout_lines}}"
+

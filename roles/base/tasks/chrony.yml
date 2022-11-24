@@ -1,0 +1,39 @@
+# Red Hat Family upgrade
+- name: Install chrony Packages on Redhat
+  dnf: name=chrony state=latest update_cache=true
+  when: ansible_os_family == "RedHat"
+
+# Debian Family upgrade
+- name: Install chrony Packages on Debian
+  apt:
+    name: 
+    - chrony
+    state: latest
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+
+
+#Set Timezone
+- name: Set timezone
+  community.general.timezone:
+    name: "{{ TZ }}"
+
+- name: Standardize NTP Source to Firewall in Redhat
+  lineinfile:
+    path: /etc/chrony.conf
+    regexp: '^server|^pool'
+    line: server {{ ansible_default_ipv4.gateway  }} iburst
+    backrefs: yes
+  notify:
+  - Restart chronyd
+  when: ansible_os_family == "RedHat"
+
+- name: Standardize NTP Source to be Firewall in Debian
+  lineinfile:
+    path: /etc/chrony/chrony.conf
+    regexp: '^server|^pool'
+    line: server {{ ansible_default_ipv4.gateway  }} iburst
+    backrefs: yes
+  notify:
+  - Restart chronyd
+  when: ansible_os_family == "Debian"

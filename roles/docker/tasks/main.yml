@@ -1,0 +1,10 @@
+---
+# tasks file for docker
+  - name: Mount docker volume
+    include_tasks: docker_mount.yml
+  
+  - name: Install
+    include_tasks: install_docker.yml
+  
+  - name: Bring up all Containers
+    include_tasks: bring_up_containers.yml

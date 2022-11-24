@@ -1,0 +1,58 @@
+- name: Install MOTD Packages on Redhat
+  yum:
+    name:
+    - neofetch
+    - figlet
+    state: latest
+    update_cache: true
+  when: ansible_os_family == "RedHat"
+
+# Debian Family upgrade
+- name: Install MOTD Packages on Debian
+  apt:
+    name: 
+    - neofetch
+    - figlet
+    state: latest
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+
+- name: Send Font files for MOTD
+  ansible.builtin.copy:
+    src: files/{{ item }}
+    dest: /usr/share/figlet/{{ item }}
+    owner: root
+    group: root
+    mode: '0644'
+  with_items:
+    - DOS_Rebel.flf
+    - Speed.flf
+
+- name: Create /tmp/motd.sh
+  ansible.builtin.file:
+    path: /tmp/motd.sh
+    state: touch
+    mode: '0755'
+
+- name: populate /tmp/motd.sh
+  blockinfile:
+    path: "/tmp/motd.sh"
+    block: |
+      RED="\e[31m"
+      ORANGE="\e[33m"
+      BLUE="\e[94m"
+      GREEN="\e[92m"
+      STOP="\e[0m"
+      printf "${GREEN}"
+      figlet -w 200 -f Speed {{ site_name }}
+      printf "${ORANGE}"
+      echo {{ host_purpose }} | figlet -w 200
+      neofetch
+      printf "${BLUE}"
+      echo "Welcome to: `hostname`"
+      printf "${STOP}"
+    create: true
+
+- name: Execute /tmp/motd.sh  to create /etc/motd
+  ansible.builtin.shell: /tmp/motd.sh > /etc/motd
+

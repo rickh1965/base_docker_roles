@@ -1,0 +1,13 @@
+---
+# tasks file for base
+  - name: Update all Packages
+    include_tasks: update_packages.yml
+  
+  - name: Install chrony Packages and sync to router
+    include_tasks: chrony.yml
+    when: with_chrony
+  
+  - name: Install MOTD Packages
+    include_tasks: addtional_packages.yml
+    when: with_motd
+

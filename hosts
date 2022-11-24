@@ -1,0 +1,44 @@
+all:
+  hosts:
+  children:
+    rocky:
+      hosts:
+        pxe.home.lan:
+          host_purpose: "PXE Boot Server"
+        rh01.home.lan:
+          host_purpose: "Plex/NextCloud Server"
+    proxmox:
+      hosts:
+        pve01.home.lan:
+          host_purpose: "Proxmox VE Cluster Node 1"
+        pve02.home.lan:
+          host_purpose: "Proxmox VE Cluster Node 2"
+        pve03.home.lan:
+          host_purpose: "Proxmox VE Cluster Node 3"
+        pve04.home.lan:
+          host_purpose: "Proxmox VE Standalone"
+    pihole:
+      hosts:
+        ns0[1:2].home.lan:
+          host_purpose: "Pihole DNS Server"
+    docker_hosts:
+      hosts:
+        dev-docker.home.lan:
+          host_purpose: "Dev Docker Server"
+          container_path: "{{ mountpoint }}/dev"
+          docker_env: "dev"
+        prod-docker.home.lan:
+          host_purpose: "Prod Docker Server"
+          container_path: "{{ mountpoint }}/prod"
+          docker_env: "prod"
+    p410_hosts:
+      hosts:
+        pve01.home.lan:
+        pve02.home.lan:
+        pve03.home.lan:
+    localhost:
+      hosts:
+        localhosts:
+          ansible_connection: local
+          ansible_python_interpreter: "{{ansible_playbook_python}}"
+          host_purpose: "Ansible Master/Desktop"

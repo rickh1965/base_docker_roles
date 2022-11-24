@@ -1,0 +1,6 @@
+---
+# vars file for base
+with_motd: false
+with_chrony: false
+site_name: "Your Site Name"
+TZ: "America/Chicago"

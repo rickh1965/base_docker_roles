@@ -1,0 +1,52 @@
+---
+
+- name: Ensure docker deamon is enabled and running
+  service:
+    name: docker
+    enabled: true
+    state: started
+
+- name: Install python-pip
+  dnf:
+    name:
+      - platform-python-pip
+
+- name: Install python docker / docker-compose modules
+  pip:
+    name:
+        - docker
+        - docker-compose
+
+- name: Create a docker traefik network
+  community.docker.docker_network:
+    name: proxy
+    state: present
+
+- name: Find all docker-compose directories for dev environment
+  find:
+    paths: "{{ container_path }}"
+    recurse: no
+    file_type: directory
+  register: dev_docker_containers
+  when: docker_env == "dev"
+
+- name: Run "docker compose up -d" on every directories for dev environment
+  community.docker.docker_compose:
+    project_src: '{{ item }}'
+  with_items: '{{ dev_docker_containers.files | map(attribute="path") | list }}'
+  when: docker_env == "dev"
+
+- name: Find all docker-compose directories for prod environment
+  find:
+    paths:  "{{ container_path }}"
+    recurse: no
+    file_type: directory
+  register: prod_docker_containers
+  when: docker_env == "prod"
+
+- name: Run "docker compose up -d" on every directories for prod environment
+  docker_compose:
+    project_src: '{{ item }}'
+  with_items: '{{ prod_docker_containers.files | map(attribute="path") | list }}'
+  when: docker_env == "prod"
+

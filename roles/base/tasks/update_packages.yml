@@ -1,0 +1,40 @@
+- name: Enable EPEL Repository on Redhat Family 
+  dnf:
+    name: epel-release
+    state: latest
+  when: ansible_facts['os_family'] == 'RedHat'
+  ignore_errors: yes
+
+- name: Upgrade RHEL Family OS packages
+  yum:
+    name: '*'
+    state: latest
+  when: ansible_os_family == "RedHat"
+
+- name: Fix nonfree enterprise repo on Proxmox
+  ansible.builtin.replace:
+    path: /etc/apt/sources.list.d/pve-enterprise.list
+    regexp: '^deb'
+    replace: '#deb'
+  when: '"proxmox" in group_names'
+
+- name: Fix enterprise repo add no subscription on Proxmox
+  lineinfile:
+    path: /etc/apt/sources.list
+    line: deb http://download.proxmox.com/debian/pve bullseye pve-no-subscription
+  when: '"proxmox" in group_names'
+
+# Debian Family upgrade
+- name: Update repositories cache on Debian
+  apt:
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+- name: Update all packages to their latest version on Debian
+  apt:
+    name: "*"
+    state: latest
+  when: ansible_os_family == "Debian"
+- name: Upgrade the OS (apt-get dist-upgrade)
+  apt:
+    upgrade: dist
+  when: ansible_os_family == "Debian"
