@@ -38,3 +38,10 @@
   apt:
     upgrade: dist
   when: ansible_os_family == "Debian"
+
+- name: Install ifupdown2
+  ansible.builtin.apt:
+    name: ifupdown2
+    allow_change_held_packages: true
+    state: present
+  when: '"proxmox" in group_names'

@@ -7,6 +7,8 @@ all:
           host_purpose: "PXE Boot Server"
         rh01.home.lan:
           host_purpose: "Plex/NextCloud Server"
+        testrl.home.lan:
+          host_purpose: "Testing Rocky Linux Install"
     proxmox:
       hosts:
         pve01.home.lan:
@@ -17,20 +19,26 @@ all:
           host_purpose: "Proxmox VE Cluster Node 3"
         pve04.home.lan:
           host_purpose: "Proxmox VE Standalone"
+        testpve.home.lan:
+          host_purpose: "Testing Proxmox Install"
     pihole:
       hosts:
         ns0[1:2].home.lan:
           host_purpose: "Pihole DNS Server"
     docker_hosts:
       hosts:
-        dev-docker.home.lan:
+        dev-rmrdtm.home.lan:
           host_purpose: "Dev Docker Server"
           container_path: "{{ mountpoint }}/dev"
           docker_env: "dev"
-        prod-docker.home.lan:
+        prod-rmrdtm.home.lan:
           host_purpose: "Prod Docker Server"
           container_path: "{{ mountpoint }}/prod"
           docker_env: "prod"
+    testing:
+      hosts:
+        testrl.home.lan:
+        testpve.home.lan:
     p410_hosts:
       hosts:
         pve01.home.lan:
